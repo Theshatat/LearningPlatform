@@ -1,8 +1,10 @@
+using LearningPlatform.Data;
 using LearningPlatform.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using LearningPlatform.Controllers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,13 +74,35 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddAuthorization(options=>
+{
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Admin"));
 
+    options.AddPolicy("InstructorsOnly", policy =>
+        policy.RequireRole("Instructor"));
+
+    options.AddPolicy("StudentOnly", policy =>
+        policy.RequireRole("Student"));
+
+    options.AddPolicy("VerifiedUser", policy =>
+        policy.RequireClaim("EmailConfirmed", "True"));
+});
+
+builder.Services.AddOpenApi();
 // ==========================
 // Build App
 // ==========================
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
 
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+    await RoleSeeder.SeedAsync(roleManager);
+}
 // ==========================
 // Middleware Pipeline
 // ==========================
@@ -88,11 +112,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+};
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();   // IMPORTANT (before Authorization)
 app.UseAuthorization();
 
 app.MapControllers();
+
 
 app.Run();

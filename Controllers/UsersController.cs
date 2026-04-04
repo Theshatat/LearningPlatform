@@ -38,7 +38,8 @@ namespace LearningPlatform.Controllers
         //    return Ok(accessToken);
         //}
         [HttpPost("Register")]
-        public async Task<IActionResult> RegisterNewUser(RegisterUserDto userDto)
+        [AllowAnonymous]
+        public async Task<IActionResult> RegisterNewUser([FromBody] RegisterUserDto userDto)
         {
             if (ModelState.IsValid)
             {
@@ -47,9 +48,10 @@ namespace LearningPlatform.Controllers
                     UserName = userDto.Username,
                     Email = userDto.Email
                 };
-                IdentityResult result = await userManager.CreateAsync(user, user.PasswordHash);
+                IdentityResult result = await userManager.CreateAsync(user, userDto.Password);
                 if (result.Succeeded)
                 {
+                    await userManager.AddToRoleAsync(user, userDto.Role.ToString());
                     return Ok("User created successfully");
                 }
                 else
@@ -65,7 +67,8 @@ namespace LearningPlatform.Controllers
                 return BadRequest(ModelState);
         }
         [HttpPost("Login")]
-        public async Task<IActionResult> Login(LoginDto userDto)
+        [AllowAnonymous]
+        public async Task<IActionResult> Login([FromBody] LoginDto userDto)
         {
             if (ModelState.IsValid)
             {
@@ -78,8 +81,8 @@ namespace LearningPlatform.Controllers
                         var claims = new List<Claim>
                             {
                                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                                new Claim(ClaimTypes.Name, user.UserName),
-                                new Claim(ClaimTypes.Email, user.Email)
+                                new Claim(ClaimTypes.Name, user.UserName?? ""),
+                                new Claim(ClaimTypes.Email, user.Email?? "")
                             };
 
                         foreach (var role in roles)
