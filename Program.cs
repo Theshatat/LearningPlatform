@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using LearningPlatform.Controllers;
+using LearningPlatform.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,9 +117,10 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 };
-
+app.UseExceptionHandlingMiddleware();  // Custom Middleware for handling exceptions globally
 app.UseHttpsRedirection();
-
+app.UseRequestLoggingMiddleware();  // Custom Middleware for logging requests
+app.UsePerformanceMiddleware();  // Custom Middleware for measuring performance of requests
 app.UseAuthentication();   // IMPORTANT (before Authorization)
 app.UseAuthorization();
 
