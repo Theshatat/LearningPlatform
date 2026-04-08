@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using LearningPlatform.Controllers;
 using LearningPlatform.Middleware;
+using LearningPlatform.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,9 +23,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // ==========================
 // Controllers
 // ==========================
-builder.Services.AddControllers();
+builder.Services.AddControllers(
+    options=>
+    {
+        options.Filters.Add<ActionLoggingFilter>();
+        options.Filters.Add<ValidationFilter>();
+    }
+);
 
-
+builder.Services.AddScoped<InstructorOnlyFilter>();
+builder.Services.AddScoped<ApiExceptionFilter>();
 // ==========================
 // Identity
 // ==========================
