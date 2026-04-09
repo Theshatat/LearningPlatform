@@ -22,6 +22,7 @@ namespace LearningPlatform.Controllers
 
         // GET: api/Lessons
         [HttpGet]
+        [ResponseCache(Duration = 60)]
         public async Task<ActionResult<IEnumerable<Lesson>>> GetLessons()
         {
             return await _context.Lessons.ToListAsync();

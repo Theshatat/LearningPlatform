@@ -7,6 +7,8 @@ using System.Text;
 using LearningPlatform.Controllers;
 using LearningPlatform.Middleware;
 using LearningPlatform.Filters;
+using LearningPlatform.Services;
+using LearningPlatform.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +20,16 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
+
+// ==========================
+// MEMORY Caching
+// ==========================
+builder.Services.AddMemoryCache();
+
+// ==========================
+// RESPONSE Caching
+// ==========================
+builder.Services.AddResponseCaching();
 
 
 // ==========================
@@ -98,7 +110,10 @@ builder.Services.AddAuthorization(options=>
         policy.RequireClaim("EmailConfirmed", "True"));
 });
 
+builder.Services.AddScoped<ICacheService, CacheService>();
 builder.Services.AddOpenApi();
+
+
 // ==========================
 // Build App
 // ==========================
@@ -129,6 +144,7 @@ app.UseExceptionHandlingMiddleware();  // Custom Middleware for handling excepti
 app.UseHttpsRedirection();
 app.UseRequestLoggingMiddleware();  // Custom Middleware for logging requests
 app.UsePerformanceMiddleware();  // Custom Middleware for measuring performance of requests
+app.UseResponseCaching();
 app.UseAuthentication();   // IMPORTANT (before Authorization)
 app.UseAuthorization();
 

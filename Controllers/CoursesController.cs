@@ -3,6 +3,7 @@ using LearningPlatform.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,17 +16,43 @@ namespace LearningPlatform.Controllers
     public class CoursesController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IMemoryCache _cache;
 
-        public CoursesController(AppDbContext context)
+        public CoursesController(AppDbContext context,IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         // GET: api/Courses
         [HttpGet("Get")]
         public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
         {
-            return await _context.Courses.ToListAsync();
+            //return await _context.Courses.ToListAsync(); // في حالة مفيش cache
+            return await _cache.GetOrCreateAsync("Courses", async e =>
+            {
+                e.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+                return await _context.Courses.ToListAsync();
+            }
+
+
+                );
+            // *** another way to implement caching without using GetOrCreateAsync ***
+
+            //const string cacheKey = "courses_list";
+
+            //if (!_cache.TryGetValue(cacheKey, out List<Course> courses))
+            //{
+            //    courses = await _context.Courses.ToListAsync();
+
+            //    var cacheOptions = new MemoryCacheEntryOptions()
+            //        .SetAbsoluteExpiration(TimeSpan.FromMinutes(5))
+            //        .SetSlidingExpiration(TimeSpan.FromMinutes(2));
+
+            //    _cache.Set(cacheKey, courses, cacheOptions);
+            //}
+
+            //return Ok(courses);
         }
 
         // GET: api/Courses/5
@@ -57,6 +84,7 @@ namespace LearningPlatform.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                _cache.Remove("Courses");
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -81,6 +109,7 @@ namespace LearningPlatform.Controllers
         {
             _context.Courses.Add(course);
             await _context.SaveChangesAsync();
+            _cache.Remove("Courses");
 
             return CreatedAtAction("GetCourse", new { id = course.Id }, course);
         }
@@ -97,6 +126,7 @@ namespace LearningPlatform.Controllers
 
             _context.Courses.Remove(course);
             await _context.SaveChangesAsync();
+            _cache.Remove("Courses");
 
             return NoContent();
         }
