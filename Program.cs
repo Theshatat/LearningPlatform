@@ -1,14 +1,15 @@
+using LearningPlatform.Controllers;
 using LearningPlatform.Data;
+using LearningPlatform.Filters;
+using LearningPlatform.InterfaceImplementation;
+using LearningPlatform.Interfaces;
+using LearningPlatform.Middleware;
 using LearningPlatform.Models;
+using LearningPlatform.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using LearningPlatform.Controllers;
-using LearningPlatform.Middleware;
-using LearningPlatform.Filters;
-using LearningPlatform.Services;
-using LearningPlatform.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -112,8 +113,11 @@ builder.Services.AddAuthorization(options=>
 
 builder.Services.AddScoped<ICacheService, CacheService>();
 builder.Services.AddOpenApi();
-
-
+// ==========================
+// Background Services and Task Queue
+// ==========================
+builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+builder.Services.AddHostedService<BackgroundEnrollmentService>();
 // ==========================
 // Build App
 // ==========================

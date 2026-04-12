@@ -1,12 +1,16 @@
 ﻿using LearningPlatform.Filters;
+using LearningPlatform.Interfaces;
 using LearningPlatform.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace LearningPlatform.Controllers
@@ -17,11 +21,13 @@ namespace LearningPlatform.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
+        private readonly IBackgroundTaskQueue _queue;
 
-        public CoursesController(AppDbContext context,IMemoryCache cache)
+        public CoursesController(AppDbContext context,IMemoryCache cache,IBackgroundTaskQueue queue)
         {
             _context = context;
             _cache = cache;
+            _queue = queue;
         }
 
         // GET: api/Courses
@@ -130,7 +136,38 @@ namespace LearningPlatform.Controllers
 
             return NoContent();
         }
+        [HttpPost("enroll")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> Enroll(int courseId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if(userId == null)
+            { 
+                return NotFound();
+            }
 
+            var enrollment = new Enrollment
+            {
+                CourseId = courseId,
+                StudentId = int.Parse(userId),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                Progress = 0,
+            };
+            _context.Enrollments.Add(enrollment);
+            await _context.SaveChangesAsync();
+
+            _queue.QueueTask(async token =>
+            {
+                await Task.Delay(3000); // simulate heavy work
+
+                Console.WriteLine($"Enrollment processed for user {userId}");
+
+                // simulate email/logging/etc.
+            });
+
+            return Ok("Enrollment submitted successfully");
+        }
         private bool CourseExists(int id)
         {
             return _context.Courses.Any(e => e.Id == id);
