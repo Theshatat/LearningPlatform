@@ -7,9 +7,11 @@ using LearningPlatform.Middleware;
 using LearningPlatform.Models;
 using LearningPlatform.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -88,7 +90,16 @@ builder.Services.AddAuthentication(options =>
             )
     };
 });
-
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("Fixed", limiterOptions =>
+    {
+        limiterOptions.PermitLimit=100;
+        limiterOptions.Window=TimeSpan.FromMinutes(4);
+        limiterOptions.QueueProcessingOrder=QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit=0;
+    });
+});
 
 // ==========================
 // Swagger (ONLY Swagger)
@@ -96,6 +107,9 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// ==========================
+// authorization policies
+// ==========================
 builder.Services.AddAuthorization(options=>
 {
     options.AddPolicy("AdminOnly", policy =>
@@ -110,8 +124,14 @@ builder.Services.AddAuthorization(options=>
     options.AddPolicy("VerifiedUser", policy =>
         policy.RequireClaim("EmailConfirmed", "True"));
 });
-
+// ==========================
+// cache service
+// ==========================
 builder.Services.AddScoped<ICacheService, CacheService>();
+
+// ==========================
+// open api service
+// ==========================
 builder.Services.AddOpenApi();
 // ==========================
 // Background Services and Task Queue
@@ -148,6 +168,7 @@ app.UseExceptionHandlingMiddleware();  // Custom Middleware for handling excepti
 app.UseHttpsRedirection();
 app.UseRequestLoggingMiddleware();  // Custom Middleware for logging requests
 app.UsePerformanceMiddleware();  // Custom Middleware for measuring performance of requests
+app.UseRateLimiter();  // Apply rate limiting to all requests
 app.UseResponseCaching();
 app.UseAuthentication();   // IMPORTANT (before Authorization)
 app.UseAuthorization();

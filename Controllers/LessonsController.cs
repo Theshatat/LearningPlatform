@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LearningPlatform.Models;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LearningPlatform.Controllers
 {
@@ -30,6 +31,7 @@ namespace LearningPlatform.Controllers
 
         // GET: api/Lessons/5
         [HttpGet("{id}")]
+        [EnableRateLimiting("Fixed")]
         public async Task<ActionResult<Lesson>> GetLesson(int id)
         {
             var lesson = await _context.Lessons.FindAsync(id);
